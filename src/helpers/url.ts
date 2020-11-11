@@ -1,4 +1,4 @@
-import { isDate, isPlainObject } from './unit'
+import { isDate, isPlainObject } from './util'
 
 function encode(val: string): string {
   return encodeURIComponent(val)
@@ -6,49 +6,50 @@ function encode(val: string): string {
     .replace(/%3A/gi, ':')
     .replace(/%24/g, '$')
     .replace(/%2C/gi, ',')
+    .replace(/%20/g, '+')
     .replace(/%5B/gi, '[')
     .replace(/%5D/gi, ']')
 }
 
-export function buildURL(url: string, params: any): string {
+export function buildURL(url: string, params?: any) {
   if (!params) {
     return url
   }
 
-  const post: string[] = []
+  const parts: string[] = []
+
   Object.keys(params).forEach(key => {
-    const val = params[key]
-    if (val === null || typeof val === 'undefined') {
+    let val = params[key]
+    if (val === null && typeof val === 'undefined') {
       return
     }
-    let values: string[] = []
+    let values: string[]
     if (Array.isArray(val)) {
       values = val
       key += '[]'
     } else {
       values = [val]
     }
-
-    values.forEach(value => {
-      if (isDate(value)) {
-        value = value.toISOString()
-      } else if (isPlainObject(value)) {
-        value = JSON.stringify(value)
+    values.forEach(val => {
+      if (isDate(val)) {
+        val = val.toISOString()
+      } else if (isPlainObject(val)) {
+        val = JSON.stringify(val)
       }
-
-      post.push(`${encode(key)}=${encode(value)}`)
+      parts.push(`${encode(key)}=${encode(val)}`)
     })
-
-    let serializedParams = post.join('&')
-    if (serializedParams) {
-      const markIndex = serializedParams.indexOf('#')
-      if (markIndex !== -1) {
-        url = url.slice(0, markIndex)
-      }
-
-      url += (url.indexOf('?') === -1 ? '?' : '&') + serializedParams
-    }
   })
+
+  let serializedParams = parts.join('&')
+
+  if (serializedParams) {
+    const markIndex = url.indexOf('#')
+    if (markIndex !== -1) {
+      url = url.slice(0, markIndex)
+    }
+
+    url += (url.indexOf('?') === -1 ? '?' : '&') + serializedParams
+  }
 
   return url
 }
